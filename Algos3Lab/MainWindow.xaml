@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Graph Application" Height="915" Width="1634">
     <Grid>
-        <!-- Таблица для ввода матрицы смежности -->
         <DataGrid x:Name="AdjacencyMatrixGrid" 
                   AutoGenerateColumns="False" 
                   Margin="10,46,75,442" 
@@ -11,15 +10,13 @@
                   Grid.Column="0"
                   HeadersVisibility="All" Grid.RowSpan="2" />
 
-        <!-- Таблица для вывода матрицы инцидентности -->
         <DataGrid x:Name="IncidenceMatrixGrid" 
                   AutoGenerateColumns="False" 
                   Margin="10,110,75,40" 
                   Grid.Row="1"
-                  HeadersVisibility="All" 
-                  IsReadOnly="True" />
+                  Grid.Column="0"
+                  HeadersVisibility="All" Grid.RowSpan="2" />
 
-        <!-- Канвас для отрисовки графа -->
         <Canvas x:Name="GraphCanvas" 
                 Background="White" 
                 Margin="0,29,10,10" Grid.Column="1" Grid.RowSpan="2" >
@@ -27,7 +24,6 @@
             <Label Content="Матрица смежности" Canvas.Left="-802" Canvas.Top="-18" HorizontalAlignment="Center" VerticalAlignment="Top"/>
         </Canvas>
 
-        <!-- Кнопки -->
         <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Center" Margin="10">
             <Button x:Name="GenerateMatrixButton" Content="Сгенерировать матрицу" Margin="5" Click="GenerateMatrixButton_Click"/>
             <Button x:Name="CheckMatrixButton" Content="Проверить матрицу" Margin="5" Click="CheckMatrixButton_Click" />
@@ -37,7 +33,6 @@
             <Button x:Name="ResetButton" Content="Сбросить всё" Margin="5" Click="ResetButton_Click" />
         </StackPanel>
 
-        <!-- Определение строк и столбцов -->
         <Grid.RowDefinitions>
             <RowDefinition Height="2*" />
             <RowDefinition Height="3*" />

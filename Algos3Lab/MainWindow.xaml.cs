@@ -2,17 +2,11 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace Algos3Lab
@@ -23,18 +17,15 @@ namespace Algos3Lab
     public partial class MainWindow : Window
     {
         private int vertexCount = 15;
-        private ObservableCollection<MatrixRow> AdjacencyMatrix { get; set; }
-        private ObservableCollection<MatrixRow> IncidenceMatrix;
+        protected internal ObservableCollection<MatrixRow> AdjacencyMatrix { get; set; }
 
         public int edgeCount { get; set; }
-
-
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeAdjacencyMatrix();
-            IncidenceMatrix = new ObservableCollection<MatrixRow>();
+            InitializeIncidenceMatrix(edgeCount);
         }
 
         private void InitializeAdjacencyMatrix()
@@ -72,8 +63,41 @@ namespace Algos3Lab
                 AdjacencyMatrixGrid.Columns.Add(column);
             }
         }
+        private void InitializeIncidenceMatrix(int edgeCount)
+        {
+            DataTable incidenceTable = new DataTable();
+            incidenceTable.Columns.Add("Vertex", typeof(string));
 
+            for (int edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++)
+            {
+                incidenceTable.Columns.Add($"Edge {edgeIndex + 1}", typeof(int));
+            }
 
+            for (int vertex = 0; vertex < vertexCount; vertex++)
+            {
+                var row = new object[edgeCount + 1];
+                row[0] = $"Vertex {vertex + 1}";
+                for (int col = 1; col <= edgeCount; col++)
+                {
+                    row[col] = 0;
+                }
+                incidenceTable.Rows.Add(row);
+            }
+
+            IncidenceMatrixGrid.ItemsSource = incidenceTable.DefaultView;
+            IncidenceMatrixGrid.Columns.Clear();
+
+            foreach (DataColumn column in incidenceTable.Columns)
+            {
+                var gridColumn = new DataGridTextColumn
+                {
+                    Header = column.ColumnName,
+                    Binding = new Binding($"[{column.ColumnName}]"),
+                    Width = 80
+                };
+                IncidenceMatrixGrid.Columns.Add(gridColumn);
+            }
+        }
 
 
         private bool ValidateAdjacencyMatrix()
@@ -100,40 +124,35 @@ namespace Algos3Lab
             return true;
         }
 
-        private bool ValidateIncidenceMatrix(int[,] adjacencyMatrix, ObservableCollection<MatrixRow> incidenceMatrix)
+        private bool ValidateIncidenceMatrix(int[,] adjacencyMatrix, int[,] incidenceMatrix)
         {
             int vertexCount = adjacencyMatrix.GetLength(0);
-            int edgeCount = incidenceMatrix[0].Values.Count;
-
-            if (incidenceMatrix.Count != vertexCount)
-            {
-                MessageBox.Show("Number of rows in incidence matrix should equal vertex count.", "Error");
-                return false;
-            }
+            int edgeCount = incidenceMatrix.GetLength(1);
 
             for (int edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++)
             {
                 int onesCount = 0;
                 for (int vertex = 0; vertex < vertexCount; vertex++)
                 {
-                    if (incidenceMatrix[vertex].Values[edgeIndex].Value == 1)
+                    if (incidenceMatrix[vertex, edgeIndex] == 1)
                         onesCount++;
                 }
                 if (onesCount != 2)
                 {
-                    MessageBox.Show($"Edge {edgeIndex + 1} is connected to {onesCount} vertices, should be 2.", "Error");
+                    MessageBox.Show($"Edge {edgeIndex + 1} must connect exactly 2 vertices.", "Error");
                     return false;
                 }
             }
 
             int[,] reconstructedAdjacency = new int[vertexCount, vertexCount];
-            for (int edgeIndex = 0; edgeCount > edgeIndex; edgeIndex++)
+            for (int edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++)
             {
                 int[] connectedVertices = new int[2];
                 int vertexIndex = 0;
+
                 for (int vertex = 0; vertex < vertexCount; vertex++)
                 {
-                    if (incidenceMatrix[vertex].Values[edgeIndex].Value == 1)
+                    if (incidenceMatrix[vertex, edgeIndex] == 1)
                     {
                         connectedVertices[vertexIndex] = vertex;
                         vertexIndex++;
@@ -141,6 +160,7 @@ namespace Algos3Lab
                             break;
                     }
                 }
+
                 reconstructedAdjacency[connectedVertices[0], connectedVertices[1]] = 1;
                 reconstructedAdjacency[connectedVertices[1], connectedVertices[0]] = 1;
             }
@@ -151,7 +171,7 @@ namespace Algos3Lab
                 {
                     if (adjacencyMatrix[i, j] != reconstructedAdjacency[i, j])
                     {
-                        MessageBox.Show($"Adjacency matrix does not match incidence matrix at [{i},{j}].", "Error");
+                        MessageBox.Show($"Adjacency matrix mismatch at [{i},{j}].", "Error");
                         return false;
                     }
                 }
@@ -160,6 +180,7 @@ namespace Algos3Lab
             MessageBox.Show("Incidence matrix is valid!", "Success");
             return true;
         }
+
 
         private void CalculateIncidenceMatrix()
         {
@@ -173,53 +194,50 @@ namespace Algos3Lab
                 {
                     if (AdjacencyMatrix[i].Values[j].Value == 1)
                     {
-                        edges.Add((i + 1, j + 1));
+                        edges.Add((i, j));
                     }
                 }
             }
 
             if (edges.Count == 0)
             {
-                MessageBox.Show("No edges in the graph.", "Error");
+                MessageBox.Show("No edges found in the graph.", "Error");
                 return;
             }
 
-            DataTable incidenceTable = new DataTable();
-            incidenceTable.Columns.Add("Вершины", typeof(string));
+            var incidenceTable = new DataTable();
+            incidenceTable.Columns.Add("Vertex", typeof(string));
             for (int edgeIndex = 0; edgeIndex < edges.Count; edgeIndex++)
             {
-                incidenceTable.Columns.Add($"Ребро {edgeIndex + 1}", typeof(int));
+                incidenceTable.Columns.Add($"Edge {edgeIndex + 1}", typeof(int));
             }
 
-            for (int vertex = 1; vertex <= vertexCount; vertex++)
+            for (int i = 0; i < vertexCount; i++)
             {
-                object[] rowValues = new object[edges.Count + 1];
-                rowValues[0] = $"Вершина {vertex}";
+                var row = new object[edges.Count + 1];
+                row[0] = $"Vertex {i + 1}";
                 for (int edgeIndex = 0; edgeIndex < edges.Count; edgeIndex++)
                 {
-                    rowValues[edgeIndex + 1] = (edges[edgeIndex].Item1 == vertex || edges[edgeIndex].Item2 == vertex) ? 1 : 0;
+                    var (u, v) = edges[edgeIndex];
+                    row[edgeIndex + 1] = (i == u || i == v) ? 1 : 0;
                 }
-                incidenceTable.Rows.Add(rowValues);
+                incidenceTable.Rows.Add(row);
             }
 
             IncidenceMatrixGrid.ItemsSource = incidenceTable.DefaultView;
-
             IncidenceMatrixGrid.Columns.Clear();
 
             foreach (DataColumn column in incidenceTable.Columns)
             {
-                var dataGridTextColumn = new DataGridTextColumn
+                var gridColumn = new DataGridTextColumn
                 {
                     Header = column.ColumnName,
-                    Binding = new Binding(column.ColumnName),
+                    Binding = new Binding($"[{column.ColumnName}]"),
                     Width = 80
                 };
-                IncidenceMatrixGrid.Columns.Add(dataGridTextColumn);
+                IncidenceMatrixGrid.Columns.Add(gridColumn);
             }
         }
-
-
-
 
         private void DrawGraph()
         {
@@ -288,19 +306,17 @@ namespace Algos3Lab
             DrawGraph();
         }
 
-
-
         private void GenerateMatrixButton_Click(object sender, RoutedEventArgs e)
         {
             var random = new Random();
 
             for (int i = 0; i < vertexCount; i++)
             {
-                for (int j = i + 1; j < vertexCount; j++) 
+                for (int j = i + 1; j < vertexCount; j++)
                 {
-                    int value = (i == j) ? 0 : random.Next(0, 2); 
+                    int value = (i == j) ? 0 : random.Next(0, 2);
                     AdjacencyMatrix[i].Values[j].Value = value;
-                    AdjacencyMatrix[j].Values[i].Value = value; 
+                    AdjacencyMatrix[j].Values[i].Value = value;
                 }
             }
 
@@ -318,8 +334,6 @@ namespace Algos3Lab
             AdjacencyMatrixGrid.Items.Refresh();
             MessageBox.Show("Матрица успешно сгенерирована!", "Успех");
         }
-
-
 
         private void ResetButton_Click(object sender, RoutedEventArgs e)
         {
@@ -352,10 +366,16 @@ namespace Algos3Lab
                 }
             }
 
-            ObservableCollection<MatrixRow> incidenceMatrix = new ObservableCollection<MatrixRow>();
-            foreach (MatrixRow row in IncidenceMatrixGrid.Items)
+            DataTable incidenceTable = ((DataView)IncidenceMatrixGrid.ItemsSource).Table;
+            int edgeCount = incidenceTable.Columns.Count - 1;
+            int[,] incidenceMatrix = new int[vertexCount, edgeCount];
+
+            for (int i = 0; i < vertexCount; i++)
             {
-                incidenceMatrix.Add(row);
+                for (int j = 0; j < edgeCount; j++)
+                {
+                    incidenceMatrix[i, j] = Convert.ToInt32(incidenceTable.Rows[i][j + 1]);
+                }
             }
 
             bool isValid = ValidateIncidenceMatrix(adjacencyMatrix, incidenceMatrix);
@@ -370,7 +390,5 @@ namespace Algos3Lab
             }
         }
 
-
     }
-
 }

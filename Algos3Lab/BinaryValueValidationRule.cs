@@ -7,10 +7,10 @@ public class BinaryValueValidationRule : ValidationRule
     {
         string input = value as string;
         if (string.IsNullOrEmpty(input))
-            return new ValidationResult(false, "Value cannot be empty.");
+            return new ValidationResult(false, "Значение не может быть пустым.");
         if (input == "0" || input == "1")
             return ValidationResult.ValidResult;
         else
-            return new ValidationResult(false, "Value must be 0 or 1.");
+            return new ValidationResult(false, "Значение должно быть 0 или 1.");
     }
 }
