@@ -1,37 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Algos3Lab;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Algos3Lab
+public class MatrixRow : INotifyPropertyChanged
 {
-    public class MatrixRow : INotifyPropertyChanged
+    private ObservableCollection<MatrixCellValue> _values;
+    public ObservableCollection<MatrixCellValue> Values
     {
-        private ObservableCollection<int> _values;
-
-        public ObservableCollection<int> Values
+        get => _values;
+        set
         {
-            get => _values;
-            set
-            {
-                _values = value;
-                OnPropertyChanged(nameof(Values));
-            }
+            _values = value;
+            OnPropertyChanged(nameof(Values));
         }
+    }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
+    private string _edgeName;
+    public string EdgeName
+    {
+        get => _edgeName;
+        set
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            _edgeName = value;
+            OnPropertyChanged(nameof(EdgeName));
         }
+    }
 
-        public MatrixRow(int size)
-        {
-            _values = new ObservableCollection<int>(new int[size]);
-        }
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    public MatrixRow(int size, string edgeName = "")
+    {
+        Values = new ObservableCollection<MatrixCellValue>(
+            Enumerable.Range(0, size).Select(_ => new MatrixCellValue { Value = 0 }));
+        EdgeName = edgeName;
     }
 }

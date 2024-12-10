@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,13 +24,17 @@ namespace Algos3Lab
     {
         private int vertexCount = 15;
         private ObservableCollection<MatrixRow> AdjacencyMatrix { get; set; }
+        private ObservableCollection<MatrixRow> IncidenceMatrix;
+
+        public int edgeCount { get; set; }
+
 
 
         public MainWindow()
         {
             InitializeComponent();
             InitializeAdjacencyMatrix();
-            InitializeIncidenceMatrix();
+            IncidenceMatrix = new ObservableCollection<MatrixRow>();
         }
 
         private void InitializeAdjacencyMatrix()
@@ -38,63 +43,36 @@ namespace Algos3Lab
 
             for (int i = 0; i < vertexCount; i++)
             {
-                AdjacencyMatrix.Add(new MatrixRow(vertexCount));
+                AdjacencyMatrix.Add(new MatrixRow(vertexCount, $"Ребро {i + 1}"));
             }
 
             AdjacencyMatrixGrid.ItemsSource = AdjacencyMatrix;
 
-            // Добавляем столбец для номеров вершин
-            var headerColumn = new DataGridTextColumn
+            AdjacencyMatrixGrid.Columns.Clear();
+
+            var edgeColumn = new DataGridTextColumn
             {
-                Header = "V",
-                Binding = new Binding("VertexName"),
-                Width = 40
+                Binding = new Binding("EdgeName"),
+                Width = 100
             };
-            AdjacencyMatrixGrid.Columns.Add(headerColumn);
+            AdjacencyMatrixGrid.Columns.Add(edgeColumn);
 
             for (int i = 0; i < vertexCount; i++)
             {
                 var column = new DataGridTextColumn
                 {
-                    Header = $"V{i + 1}",
-                    Binding = new Binding($"Values[{i}]")
+                    Header = $"Vertex {i + 1}",
+                    Binding = new Binding($"Values[{i}].Value")
                     {
                         UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
-                        ValidatesOnDataErrors = true,
-                        ValidatesOnExceptions = true,
                         ValidationRules = { new BinaryValueValidationRule() }
                     },
-                    Width = 40
+                    Width = 80
                 };
                 AdjacencyMatrixGrid.Columns.Add(column);
             }
         }
 
-        private void InitializeIncidenceMatrix()
-        {
-            IncidenceMatrixGrid.Columns.Clear();
-
-            // Добавляем столбец для номеров рёбер
-            var edgeColumn = new DataGridTextColumn
-            {
-                Header = "Ребро",
-                Binding = new Binding("EdgeName"),
-                Width = 40
-            };
-            IncidenceMatrixGrid.Columns.Add(edgeColumn);
-
-            // Добавляем столбцы для вершин
-            for (int i = 0; i < vertexCount; i++)
-            {
-                var column = new DataGridTextColumn
-                {
-                    Header = $"V{i + 1}",
-                    Binding = new Binding($"Values[{i}]"),
-                    Width = 40
-                };
-                IncidenceMatrixGrid.Columns.Add(column);
-            }
-        }
 
 
 
@@ -104,13 +82,13 @@ namespace Algos3Lab
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    if (AdjacencyMatrix[i].Values[j] < 0 || AdjacencyMatrix[i].Values[j] > 1)
+                    if (AdjacencyMatrix[i].Values[j].Value < 0 || AdjacencyMatrix[i].Values[j].Value > 1)
                     {
                         MessageBox.Show($"Элемент [{i + 1}, {j + 1}] должен быть 0 или 1.", "Ошибка");
                         return false;
                     }
 
-                    if (AdjacencyMatrix[i].Values[j] != AdjacencyMatrix[j].Values[i])
+                    if (AdjacencyMatrix[i].Values[j].Value != AdjacencyMatrix[j].Values[i].Value)
                     {
                         MessageBox.Show($"Матрица должна быть симметричной. Ошибка в элементах [{i + 1}, {j + 1}] и [{j + 1}, {i + 1}].", "Ошибка");
                         return false;
@@ -125,67 +103,63 @@ namespace Algos3Lab
         private bool ValidateIncidenceMatrix(int[,] adjacencyMatrix, ObservableCollection<MatrixRow> incidenceMatrix)
         {
             int vertexCount = adjacencyMatrix.GetLength(0);
+            int edgeCount = incidenceMatrix[0].Values.Count;
 
-            int edgeCount = 0;
-            for (int i = 0; i < vertexCount; i++)
+            if (incidenceMatrix.Count != vertexCount)
             {
-                for (int j = i + 1; j < vertexCount; j++)
-                {
-                    if (adjacencyMatrix[i, j] == 1)
-                        edgeCount++;
-                }
-            }
-
-            if (incidenceMatrix.Count != edgeCount)
-            {
-                MessageBox.Show("Количество рёбер в матрице инцидентности не совпадает с количеством рёбер в матрице смежности.", "Ошибка");
+                MessageBox.Show("Number of rows in incidence matrix should equal vertex count.", "Error");
                 return false;
             }
 
-            for (int i = 0; i < incidenceMatrix.Count; i++)
+            for (int edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++)
             {
-                var row = incidenceMatrix[i];
-                int count = row.Values.Count(v => v == 1);
-
-                if (count != 2) 
+                int onesCount = 0;
+                for (int vertex = 0; vertex < vertexCount; vertex++)
                 {
-                    MessageBox.Show($"Строка {i + 1} в матрице инцидентности содержит неверное количество единиц. Ожидается 2.", "Ошибка");
+                    if (incidenceMatrix[vertex].Values[edgeIndex].Value == 1)
+                        onesCount++;
+                }
+                if (onesCount != 2)
+                {
+                    MessageBox.Show($"Edge {edgeIndex + 1} is connected to {onesCount} vertices, should be 2.", "Error");
                     return false;
                 }
+            }
+
+            int[,] reconstructedAdjacency = new int[vertexCount, vertexCount];
+            for (int edgeIndex = 0; edgeCount > edgeIndex; edgeIndex++)
+            {
+                int[] connectedVertices = new int[2];
+                int vertexIndex = 0;
+                for (int vertex = 0; vertex < vertexCount; vertex++)
+                {
+                    if (incidenceMatrix[vertex].Values[edgeIndex].Value == 1)
+                    {
+                        connectedVertices[vertexIndex] = vertex;
+                        vertexIndex++;
+                        if (vertexIndex == 2)
+                            break;
+                    }
+                }
+                reconstructedAdjacency[connectedVertices[0], connectedVertices[1]] = 1;
+                reconstructedAdjacency[connectedVertices[1], connectedVertices[0]] = 1;
             }
 
             for (int i = 0; i < vertexCount; i++)
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    if (adjacencyMatrix[i, j] == 1)
+                    if (adjacencyMatrix[i, j] != reconstructedAdjacency[i, j])
                     {
-                        bool found = false;
-                        for (int row = 0; row < incidenceMatrix.Count; row++)
-                        {
-                            var rowData = incidenceMatrix[row].Values;
-                            if ((rowData[i] == 1 && rowData[j] == 1)) 
-                            {
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (!found)
-                        {
-                            MessageBox.Show($"Ошибка инцидентности: между вершинами {i + 1} и {j + 1} должно быть ребро.", "Ошибка");
-                            return false;
-                        }
+                        MessageBox.Show($"Adjacency matrix does not match incidence matrix at [{i},{j}].", "Error");
+                        return false;
                     }
                 }
             }
 
-            MessageBox.Show("Матрица инцидентности корректна!", "Успех");
+            MessageBox.Show("Incidence matrix is valid!", "Success");
             return true;
         }
-
-
-
-
 
         private void CalculateIncidenceMatrix()
         {
@@ -193,73 +167,56 @@ namespace Algos3Lab
                 return;
 
             var edges = new List<(int, int)>();
-            // Collect edges from adjacency matrix
             for (int i = 0; i < vertexCount; i++)
             {
                 for (int j = i + 1; j < vertexCount; j++)
                 {
-                    if (AdjacencyMatrix[i].Values[j] == 1)
+                    if (AdjacencyMatrix[i].Values[j].Value == 1)
                     {
-                        edges.Add((i, j)); // Edge between vertex i and j
+                        edges.Add((i + 1, j + 1));
                     }
                 }
             }
 
-            // Check for zero edges
             if (edges.Count == 0)
             {
                 MessageBox.Show("No edges in the graph.", "Error");
                 return;
             }
 
-            // Generate columns for edges in the DataGrid
+            DataTable incidenceTable = new DataTable();
+            incidenceTable.Columns.Add("Вершины", typeof(string));
+            for (int edgeIndex = 0; edgeIndex < edges.Count; edgeIndex++)
+            {
+                incidenceTable.Columns.Add($"Ребро {edgeIndex + 1}", typeof(int));
+            }
+
+            for (int vertex = 1; vertex <= vertexCount; vertex++)
+            {
+                object[] rowValues = new object[edges.Count + 1];
+                rowValues[0] = $"Вершина {vertex}";
+                for (int edgeIndex = 0; edgeIndex < edges.Count; edgeIndex++)
+                {
+                    rowValues[edgeIndex + 1] = (edges[edgeIndex].Item1 == vertex || edges[edgeIndex].Item2 == vertex) ? 1 : 0;
+                }
+                incidenceTable.Rows.Add(rowValues);
+            }
+
+            IncidenceMatrixGrid.ItemsSource = incidenceTable.DefaultView;
+
             IncidenceMatrixGrid.Columns.Clear();
-            IncidenceMatrixGrid.ItemsSource = null;
 
-            for (int i = 0; i < edges.Count; i++)
+            foreach (DataColumn column in incidenceTable.Columns)
             {
-                IncidenceMatrixGrid.Columns.Add(new DataGridTextColumn
+                var dataGridTextColumn = new DataGridTextColumn
                 {
-                    Header = $"E{i + 1}",
-                    Binding = new Binding($"Values[{i}]"),
-                    Width = 40
-                });
-            }
-
-            // Generate rows for vertices (vertex-edge relationships)
-            var incidenceMatrix = new ObservableCollection<MatrixRow>();
-            for (int i = 0; i < vertexCount; i++)
-            {
-                var row = new MatrixRow(edges.Count);
-                for (int j = 0; j < edges.Count; j++)
-                {
-                    if (edges[j].Item1 == i || edges[j].Item2 == i)
-                        row.Values[j] = 1;
-                }
-                incidenceMatrix.Add(row);
-            }
-
-            IncidenceMatrixGrid.ItemsSource = incidenceMatrix;
-
-            // Debug output
-            Console.WriteLine("Edges:");
-            foreach (var edge in edges)
-            {
-                Console.WriteLine($"E{(edges.IndexOf(edge) + 1)}: ({edge.Item1}, {edge.Item2})");
-            }
-
-            Console.WriteLine("Incidence Matrix:");
-            for (int i = 0; i < incidenceMatrix.Count; i++)
-            {
-                Console.Write($"Vertex {i}: ");
-                foreach (var value in incidenceMatrix[i].Values)
-                {
-                    Console.Write($"{value} ");
-                }
-                Console.WriteLine();
+                    Header = column.ColumnName,
+                    Binding = new Binding(column.ColumnName),
+                    Width = 80
+                };
+                IncidenceMatrixGrid.Columns.Add(dataGridTextColumn);
             }
         }
-
 
 
 
@@ -298,7 +255,7 @@ namespace Algos3Lab
             {
                 for (int j = i + 1; j < vertexCount; j++)
                 {
-                    if (AdjacencyMatrix[i].Values[j] == 1)
+                    if (AdjacencyMatrix[i].Values[j].Value == 1)
                     {
                         var line = new Line
                         {
@@ -342,8 +299,8 @@ namespace Algos3Lab
                 for (int j = i + 1; j < vertexCount; j++) 
                 {
                     int value = (i == j) ? 0 : random.Next(0, 2); 
-                    AdjacencyMatrix[i].Values[j] = value;
-                    AdjacencyMatrix[j].Values[i] = value; 
+                    AdjacencyMatrix[i].Values[j].Value = value;
+                    AdjacencyMatrix[j].Values[i].Value = value; 
                 }
             }
 
@@ -352,7 +309,7 @@ namespace Algos3Lab
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    matrixString.Append(AdjacencyMatrix[i].Values[j] + " ");
+                    matrixString.Append(AdjacencyMatrix[i].Values[j].Value + " ");
                 }
                 matrixString.AppendLine();
             }
@@ -370,7 +327,7 @@ namespace Algos3Lab
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    AdjacencyMatrix[i].Values[j] = 0;
+                    AdjacencyMatrix[i].Values[j].Value = 0;
                 }
             }
 
@@ -391,7 +348,7 @@ namespace Algos3Lab
             {
                 for (int j = 0; j < vertexCount; j++)
                 {
-                    adjacencyMatrix[i, j] = AdjacencyMatrix[i].Values[j];
+                    adjacencyMatrix[i, j] = AdjacencyMatrix[i].Values[j].Value;
                 }
             }
 
